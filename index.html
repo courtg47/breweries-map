@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='utf-8'>
+
+  <title>Breweries of Birmingham, AL</title>
+
+  <!-- Setting the viewport for responsiveness -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Linking CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Implementing KnockoutJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.4.2/knockout-min.js"></script>
+
+  <!-- Implementing jQuery -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Skranji|Tajawal" rel="stylesheet">
+
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.13/css/all.css" integrity="sha384-DNOHZ68U8hZfKXOrtjWvjxusGo9WQnrNx2sqG0tfsghAvtVlRW3tvkXWZh58N9jp" crossorigin="anonymous">
+</head>
+
+<body>
+  <main class="container">
+
+    <!-- Header containing title and Hamburger icon for sidebar -->
+    <header class="header">
+      <h1 class="headline">Best Breweries of Birmingham, AL</h1>
+
+      <!-- Hamburger icon from Font Awesome -->
+      <a data-bind="click: slideSidebar, visible: hamburger() === false && desktop() === false" class="sidebar-toggle fa fa-bars"></a>
+    </header>
+
+    <!-- Sidebar with list of breweries and other functions to be applied to the map -->
+    <aside class="sidebar" data-bind="fadeVisible: hamburger(), visible: desktop()">
+
+      <!-- Close Window icon from Font Awesome -->
+      <a class="sidebar-close fa fa-window-close" data-bind="click: slideSidebar, visible: desktop() === false"></a>
+
+      <!-- Show and Hide buttons which show or hide all brewery icons on the map when clicked  -->
+      <form class="show-hide">
+        <input class="show-breweries red-button-color" type="button" value="Show Breweries" data-bind="click: showBreweries">
+        <input class="hide-breweries red-button-color" type="button" value="Hide Breweries" data-bind="click: hideBreweries">
+      </form>
+
+      <!-- Locate a route to the closest breweries. Users can find breweries within
+      a specified length of time taking into consideration a specific mode of transportation -->
+      <section class="find-route">
+        <h3 class="directions-title">Get Directions to Your Nearest Brewery</h3>
+        <form class="timeframe-form" data-bind="submit: timeFrameButton" action="#">
+          <span class="find-text">Within</span>
+          <!-- Dropdowns for timeframe and mode of transportation -->
+          <select class="max-duration" data-bind="options: duration, selectedOptions: chosenDuration, value: maxDuration"></select>
+          <select class="transportation-mode" data-bind="options: transportationModes, selectedOptions: chosenMode, value: mode"></select>
+          <span class="find-text">of</span>
+          <!-- Enter address field with submit button -->
+          <input id="search-timeframe" class="search-timeframe input-style" onfocus="this.value=''" type="text" placeholder="Enter Your Address">
+          <input id="search-timeframe-button" class="search-timeframe-button form-button-style" type="submit" value="Go">
+        </form>
+
+        <!-- Resets all settings on the map and list item view -->
+        <input id="reset" class="reset red-button-color" data-bind="click: resetButton" type="submit" value="Reset Map">
+      </section>
+
+      <!-- Filters list of Breweries in list item view and map markers -->
+      <form class="search-form" data-bind="submit: searchForm" action="#">
+        <input id="search" class="search input-style" type="text" data-bind="textInput: searchValue" onfocus="this.value=''" placeholder="Search for your Brewery!">
+        <button class="search-button form-button-style" type="submit">Find</button>
+      </form>
+
+      <!-- Displays list of all breweries in the sidebar with information gathered from the Foursquare API -->
+      <section class="names-list" data-bind="foreach: breweries">
+        <!-- Individual Brewery Div Information -->
+        <div class="list-item-start" data-bind="visible: $parent.isSelected() === name || $parent.isVisible()">
+          <!-- Title of Brewery that is clickable -->
+          <a class="name-title" data-bind="text: name, click: $root.animateMarker(name)"></a>
+          <!-- Below information expands when the title above is clicked. Contains image and other info from the Foursquare API. -->
+          <div class="sidebar-info" data-bind="visible: $root.animateListItem() == name || $parent.isVisible() === false">
+            <img class="brewery-image" data-bind="attr: { src: $parent.image }" alt="Birmingham Brewery">
+            <a class="brewery-url" data-bind="attr: { href: $parent.breweryUrl }, text: $parent.breweryUrl" target="_blank"></a>
+            <p class="brewery-info" data-bind="text: $parent.phoneNumber"></p>
+            <p class="brewery-info" data-bind="text: $parent.likes"></p>
+            <p class="brewery-info" data-bind="text: $parent.hours"></p>
+            <p class="brewery-info foursquare">Info Provided by Foursquare  <i class="fab fa-foursquare"></i></p>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+    <!-- End Side Bar-->
+
+    <!-- Main Google Map Display of Birmingham -->
+    <section id="map" class="map"></section>
+
+  </main>
+
+  <!-- External Javascript file -->
+  <script src="js/app.js"></script>
+
+  <!-- Google Maps API link -->
+  <script src="https://maps.googleapis.com/maps/api/js?libraries=places,geometry&key=AIzaSyAB4cwLRIY46U293JVL81nFm_0ExYb83Qw&v=3&callback=initMap" async defer></script>
+
+</body>
+
+</html>
