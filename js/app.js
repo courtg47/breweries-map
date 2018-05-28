@@ -124,16 +124,9 @@ function initMap() {
         }
   });
 
-
   // Set default map to styled map.
   map.mapTypes.set('styled_map', styledMapType);
   map.setMapTypeId('styled_map');
-
-  /**
-  * @description Creates a new instance of an Infowindow from Google Maps API
-  * @constructor
-  */
-  let infoWindow = new google.maps.InfoWindow();
 
   /**
   * @description Creates new lat/long bounds from Google Maps API
@@ -149,29 +142,25 @@ function initMap() {
   const timeAutocomplete = new google.maps.places.Autocomplete(
     document.getElementById('search-timeframe'));
 
+  // Creating map markers
+  let marker = createMarkers();
 
-  /* Looping through breweries and creating a map marker for each
-  location with a Drop animation on initial loading of map. */
-  for (let i = 0; i < breweries.length; i++) {
-    let location = breweries[i].location;
-    let name = breweries[i].name;
-
-    // Creating map marker.
-    let marker = createMarker(location, name, i);
-
-  /**
-  * @description creates click event listener for Google Maps Markers
-  */
-  marker.addListener('click', function() {
-    ViewModel.animateMarker(this.name);
-  });
-
-  bounds.extend(marker.position);
+  // Setting map bounds around marker locations
+  for (let i = 0; i < markers.length; i++) {
+    bounds.extend(markers[i].position);
   }
 
   map.fitBounds(bounds);
-};
+}
 // END INIT MAP
+
+
+/**
+* @description Error handling function if Google Maps API fails
+*/
+window.googleError = function() {
+  window.alert("We're sorry, but the Google Maps API is not working right now. Please try again later.");
+};
 
 
 // MODEL
@@ -210,8 +199,8 @@ const breweries = [
 function initFourSquare(name) {
   const url = 'https://api.foursquare.com/v2/venues/search?';
   let venue = name.replace(/\s+/g, '-').toLowerCase();
-  const clientID = '2HARRIFBQDACIAHT1KDGSBGMUHDV14PST4PHOR4VDHXECHPM';
-  const clientSecret = 'FRVNSUOYQGL0C1U2QJJQTKKSX1NJY134KGRKSWLM44EVNBFF';
+  const clientID = 'HOS53SOESZJ00JSKFP0OKNLVB5CF1LDMKD03HZ5PVPQMSD1R';
+  const clientSecret = '4EVRHCNNBDHU4FCSLHDBYPVVSZ1XIUX4UZHOEA0RNJB3USVJ';
   const version = '20180518';
   let venueID = '';
 
@@ -269,6 +258,7 @@ function getFourSquareDetails(venueID, clientID, clientSecret, version) {
       let breweryUrl = data.response.venue.url;
       let phoneNumber = data.response.venue.contact.formattedPhone;
       let likes = data.response.venue.likes.summary;
+      let attribute = data.response.venue.canonicalUrl + "?ref=" + clientID;
       let hours;
 
       if (data.response.venue.hours === undefined) {
@@ -282,6 +272,7 @@ function getFourSquareDetails(venueID, clientID, clientSecret, version) {
       ViewModel.breweryUrl(breweryUrl);
       ViewModel.phoneNumber(phoneNumber);
       ViewModel.likes(likes);
+      ViewModel.attributionUrl(attribute);
     },
     error: function(response) {
       window.alert("We're sorry, but we cannot access the Foursquare API. Please try again later.");
@@ -299,8 +290,8 @@ function getFourSquareDetails(venueID, clientID, clientSecret, version) {
 const ViewModel = {
   hamburger: ko.observable(false),
   desktop: ko.observable(false),
-  isSelected: ko.observable(''),
-  isVisible: ko.observable(true),
+  isMatch: ko.observableArray(),
+  isSearching: ko.observable(false),
   duration: ko.observableArray(['10 min', '15 min', '30 min', '60 min']),
   chosenDuration: ko.observableArray(['10 min']),
   transportationModes: ko.observableArray(['DRIVING', 'WALKING', 'BICYCLING', 'TRANSIT']),
@@ -315,6 +306,7 @@ const ViewModel = {
   phoneNumber: ko.observable(''),
   likes: ko.observable(''),
   hours: ko.observable(''),
+  attributionUrl: ko.observable(''),
   /**
   * @description Makes sidebar static when desktop size. Otherwise,
   * hides sidebar until Hamburger icon is pressed
@@ -371,49 +363,55 @@ const ViewModel = {
   resetButton: function() {
     closeInfoWindows(infoWindows);
     this.showBreweries();
-    this.isVisible(true);
+    this.isSearching(false);
     this.image('');
     this.breweryUrl('');
     this.phoneNumber('');
     this.likes('');
     this.hours('');
+    this.attributionUrl('');
   },
-/**
-* @description Searches List Items and Map Markers for Brewery in search field
-* @returns {string} Name of marker to be passed to other functions
-*/
-searchForm: function() {
-  //Unwraps observable and converts to lower case with no whitespace for comparison
-  const searchValue = ko.utils.unwrapObservable(this.searchValue).toLowerCase().replace(/ /g,'');
-  let atLeastOne = false;
-  //If infowindows are open, close all of them.
-  closeInfoWindows(infoWindows);
-  for (let i = 0; i < markers.length; i++) {
-    //Converting name of marker to lower case and no whitespace for comparison
-    let compareName = markers[i].name.toLowerCase().replace(/ /g,'');
-      //Comparing name of marker and name entered in text box for a match
-      if (compareName.indexOf(searchValue) != -1 || searchValue.indexOf(compareName) != -1) {
-        //Search for marker
-        atLeastOne = true;
-        search(markers[i]);
-        //Search for list item
-        this.isSelected(markers[i].name);
-        this.makeInvisible();
-        initFourSquare(markers[i].name);
-      }
-} if (atLeastOne === false) {
-    window.alert("We're sorry, no breweries in the area match your search. Please try again.");
-  }
-},
   /**
-  * @description Makes additional Brewery Information Disappear
-  * @returns {boolean} isVisible observable to false
+  * @description Searches List Items and Map Markers for Brewery in search field
+  * @returns {string} Name of marker to be passed to other functions
   */
-  makeInvisible: function() {
-    const selected = ko.utils.unwrapObservable(this.isSelected);
-      if (selected !== '') {
-        this.isVisible(false);
+  searchForm: function() {
+    // Unwraps observable and converts to lower case for comparison
+    const searchValue = ko.utils.unwrapObservable(this.searchValue).toLowerCase();
+    let atLeastOne = false;
+    let isMatch = [];
+    // If infowindows are open, close all of them.
+    closeInfoWindows(infoWindows);
+    // Resetting observables to default values
+    this.isSearching(true);
+    this.isMatch([]);
+    this.animateListItem('');
+
+    for (let i = 0; i < markers.length; i++) {
+      markers[i].setMap(map);
+      // Converting marker names to lower case for comparison
+      let compareName = markers[i].name.toLowerCase();
+
+      // Comparing marker name and search value name
+      if (compareName.indexOf(searchValue) != -1) {
+        isMatch.push(markers[i]);
+        atLeastOne = true;
+      } else {
+        // Removing marker from map if not a match
+        markers[i].setMap(null);
       }
+    }
+    // If no matches
+    if (atLeastOne === false) {
+      window.alert("We're sorry, no breweries in the area match your search. Please try again.");
+    } else {
+      for (let i = 0; i < isMatch.length; i++) {
+        // Search for matching markers
+        search(isMatch[i]);
+        // Matching list items
+        this.isMatch.push(isMatch[i].name);
+      }
+    }
   },
   /**
   * @description Animates map marker with infowindow and list item
@@ -424,14 +422,26 @@ searchForm: function() {
     name = ko.utils.unwrapObservable(name);
     for (let i = 0; i < markers.length; i++) {
       if (name === markers[i].name) {
-        initFourSquare(name);
         let infoWindow = new google.maps.InfoWindow();
         closeInfoWindows(infoWindows);
         toggleBounce(markers[i]);
         populateInfoWindow(markers[i], infoWindow);
         this.animateListItem(name);
+        initFourSquare(name);
       }
     }
+  },
+  /**
+  * @description Inserts info from Foursquare into list item div
+  * and animates map marker
+  * @param {string} name - Name of list item
+  * @returns {string} Name of brewery to animate into ViewModel
+  */
+  animateList: function(name) {
+    name = ko.utils.unwrapObservable(name);
+    this.animateListItem(name);
+    initFourSquare(name);
+    this.animateMarker(name);
   },
 };
 /**
@@ -448,7 +458,7 @@ ko.bindingHandlers.fadeVisible = {
   update: function(element, valueAccessor) {
       // Whenever the value changes, slide sidebar or fade out
       const value = valueAccessor();
-      ko.unwrap(value) ? $(element).animate({width: 'toggle'}) : $(element).fadeOut();
+      return ko.unwrap(value) ? $(element).animate({width: 'toggle'}) : $(element).fadeOut();
   }
 };
 // Applies Knockout bindings
@@ -457,24 +467,40 @@ ko.applyBindings(ViewModel);
 
 
 /**
-* @description Creates Map Markers for Brewery
-* @param {string} location - Location coordinates for Brewery
-* @param {string} name - Name of Brewery
-* @param {string} i - Index of brewery array containing name and location
-* @returns {string} Map marker
+* @description Creates Map Markers for Breweries
+* @returns {string} Map markers
 */
-function createMarker(location, name, i) {
-  // Creating map marker.
-  let marker = new google.maps.Marker({
-    map: map,
-    position: location,
-    name: name,
-    animation: google.maps.Animation.DROP,
-    id: i
-  });
+function createMarkers() {
+  for (let i = 0; i < breweries.length; i++) {
+    let location = breweries[i].location;
+    let name = breweries[i].name;
 
-  markers.push(marker);
-  return marker;
+    // Creating map marker.
+    let marker = new google.maps.Marker({
+      map: map,
+      position: location,
+      name: name,
+      animation: google.maps.Animation.DROP,
+      id: i
+    });
+
+    markers.push(marker);
+    markerEventListener(marker);
+  }
+  return markers;
+}
+
+
+/**
+* @description Creates click event listener for map markers
+* @param {string} marker - Map marker
+* @returns {string} Name of marker passed into ViewModel observable
+*/
+function markerEventListener(marker) {
+  // Creates click event listener for Google Maps Markers
+  marker.addListener('click', function() {
+    ViewModel.animateMarker(marker.name);
+  });
 }
 
 
@@ -489,7 +515,7 @@ function toggleBounce(marker) {
   } else {
     marker.setAnimation(google.maps.Animation.BOUNCE);
     setTimeout(function() {
-      marker.setAnimation() == null;
+      marker.setAnimation(null);
     }, 2000);
   }
 }
@@ -503,9 +529,9 @@ function toggleBounce(marker) {
 function search(marker) {
   const geocoder = new google.maps.Geocoder();
   marker = marker;
-  const address = ko.utils.unwrapObservable(ViewModel.searchValue);
+  let address = ko.utils.unwrapObservable(ViewModel.searchValue);
 
-  if (address == '') {
+  if (address === '') {
     window.alert('You must enter a Brewery name.');
   } else {
     geocoder.geocode(
@@ -513,16 +539,13 @@ function search(marker) {
         componentRestrictions: {locality: 'Birmingham'}
       }, function(results, status) {
         if (status == google.maps.GeocoderStatus.OK) {
-          map.setCenter(results[0].geometry.location);
+          // Resizing map to center on filtered map markers
+          google.maps.event.trigger(map, 'resize');
+          map.setCenter(new google.maps.LatLng(results[0].geometry.location.lat, results[0].geometry.location.lng));
           map.setZoom(15);
-          infoWindow = new google.maps.InfoWindow();
-
-          populateInfoWindow(marker, infoWindow);
+          // Animating map marker
           toggleBounce(marker);
-
-          infoWindow.open(map, marker);
-          marker.infoWindow = infoWindow;
-
+        // If location not found
         } else {
             window.alert('Sorry, we could not find that location. Try entering another.');
           }
@@ -537,13 +560,13 @@ function search(marker) {
 * @returns {string} Matching origin and destination addresses from Google Maps API
 */
 function searchTimeframeAndMode() {
-  const distanceMatrixService = new google.maps.DistanceMatrixService;
+  const distanceMatrixService = new google.maps.DistanceMatrixService();
   const address = document.getElementById('search-timeframe').value;
 
-  if (address == '') {
+  if (address === '') {
     window.alert('You must enter an address.');
   } else {
-    ViewModel.hideBreweries;
+    ViewModel.hideBreweries();
     closeInfoWindows(infoWindows);
 
     let destinations = [];
@@ -582,7 +605,6 @@ function displayMarkersWithinTimeframe(response) {
   let maxDuration = ko.utils.unwrapObservable(ViewModel.maxDuration);
   maxDuration = parseInt(maxDuration);
   const destinations = response.destinationAddresses;
-  const origins = response.originAddresses;
   let atLeastOne = false;
 
   for (let i = 0; i < destinations.length; i++) {
@@ -631,9 +653,9 @@ function displayMarkersWithinTimeframe(response) {
 * @returns Google Maps route from origin to destination
 */
 function displayDirections(destination) {
-  ViewModel.hideBreweries;
+  ViewModel.hideBreweries();
   closeInfoWindows(infoWindows);
-  const directionsService = new google.maps.DirectionsService;
+  const directionsService = new google.maps.DirectionsService();
 
   const originAddress = document.getElementById('search-timeframe').value;
 
@@ -690,8 +712,6 @@ function closeInfoWindows(infoWindows) {
 }
 
 
-/* Populates infowindow with information about Brewery when
-marker is clicked. */
 /**
 * @description Populates blank infowindows with Google Streetview image and name
 * @param {string} marker - Map marker for brewery
@@ -722,7 +742,7 @@ function populateInfoWindow(marker, infowindow) {
         const heading = google.maps.geometry.spherical.computeHeading(
           nearStreetViewLocation, marker.position);
           //Adds Streetview and name of Brewery to infowindow when marker is clicked
-          infowindow.setContent('<div class="infowindow"><h3>' + marker.name + '</h3></div>' + '<div id="pano" class="pano""></div>');
+          infowindow.setContent('<div class="infowindow"><h3>' + marker.name + '</h3></div>' + '<div id="pano" class="pano"></div>');
           const panoramaOptions = {
             position: nearStreetViewLocation,
             pov: {
@@ -733,8 +753,7 @@ function populateInfoWindow(marker, infowindow) {
           const panorama = new google.maps.StreetViewPanorama(
             document.getElementById('pano'), panoramaOptions);
       } else {
-        infowindow.setContent('<div class="infowindow"><h3>' + marker.name + '</h3></div>' +
-      '<div><p>Street View Not Found</p></div>');
+          infowindow.setContent('<div class="infowindow"><h3>' + marker.name + '</h3></div>' + '<div><p>Street View Not Found</p></div>');
       }
     }
     streetViewService.getPanoramaByLocation(marker.position, radius, getStreetView);
