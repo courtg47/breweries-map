@@ -36,10 +36,10 @@ body {
 /* SIDEBAR INFO */
 /* Main container for the sidebar */
 .sidebar {
-  height: 90%;
+  height: 100%;
   text-align: left;
   width: 75%;
-  padding: 3%;
+  padding: 2%;
   background-color: #232323;
   z-index: 2;
   bottom: 0;
@@ -82,19 +82,19 @@ body {
   width: 45%;
   height: auto;
   margin-top: 7%;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* Applies color to hide and show breweries buttons and to the reset button */
 .red-button-color {
   background-color: #fd024a;
   color: #fbf8f8;
-  border: 1.5px solid #fd024a;
+  border: 1.5px solid #cd023c;
   cursor: pointer;
 }
 
 .red-button-color:hover {
-  border: 1.5px solid #cd023c;
+  border: 1.5px solid #fd024a;
   background-color: #cd023c;
   transition: all 0.5s ease 0s;
 }
@@ -127,7 +127,7 @@ body {
 .transportation-mode {
   width: 35%;
   height: auto;
-  font-size: 18px;
+  font-size: 16px;
   border-radius: 5px;
   color: #040404;
   background-color: #fbf8f8;
@@ -158,13 +158,13 @@ body {
   height: auto;
   text-align: center;
   background-color: #ff5733;
-  border: 3px solid #ff5733;
+  border: 3px solid #fe5c39;
   color: #fbf8f8;
   cursor: pointer;
 }
 
 .form-button-style:hover {
-  border: 3px solid #fc7c61;
+  border: 3px solid #fd7255;
   background-color: #fc7c61;
   transition: all 0.5s ease 0s;
 }
@@ -200,7 +200,7 @@ body {
   margin: 3% 3% 6%;
   text-decoration: none;
   font-size: 20px;
-  border-bottom: 1.5px solid #fbf8f8;
+  border-bottom: 1.5px solid #f3f2f2;
   background-color: #fbf8f8;
   color: #040404;
   padding: 2%;
@@ -232,7 +232,7 @@ body {
 
 /* Url of Brewery */
 .brewery-url {
-  font-size: 17px;
+  font-size: 15px;
 }
 /* END SIDEBAR */
 
@@ -244,7 +244,7 @@ body {
   width: 100%;
   position: absolute;
   bottom: 0;
-  top: 15%;
+  top: 20%;
   right: 0;
   z-index: 1;
 }
@@ -261,11 +261,11 @@ of breweries selected during directions search */
   cursor: pointer;
   background-color: #fd024a;
   color: #fbf8f8;
-  border: 1.5px solid #fd024a;
+  border: 1.5px solid #cd023c;
 }
 
 .view-route:hover {
-  border: 1.5px solid #cd023c;
+  border: 1.5px solid #fd024a;
   background-color: #cd023c;
   transition: all 0.5s ease 0s;
 }
@@ -276,6 +276,14 @@ of breweries selected during directions search */
   height: 200px;
 }
 /* END GOOGLE MAP */
+
+
+/* Larger Mobile Size */
+@media screen and (min-width: 380px) {
+  .map {
+    top: 15%;
+  }
+}
 
 
 /* Tablet version */
@@ -318,7 +326,11 @@ of breweries selected during directions search */
   }
 
   .brewery-image {
-    margin-left: 5%;
+    margin-left: 8%;
+  }
+
+  .brewery-url {
+    font-size: 17px;
   }
 
   .map {
@@ -376,7 +388,7 @@ of breweries selected during directions search */
 
   .reset {
     font-size: 14px;
-    margin-left: 25%;
+    margin-left: 28%;
   }
 
   .name-title {
@@ -384,9 +396,15 @@ of breweries selected during directions search */
   }
 
   .sidebar-info {
-    font-size: 16px;
+    font-size: 18px;
+  }
+
+  .brewery-image {
+    margin-left: 20%;
   }
 
   .map {
     top: 9%;
   }
+
+}
